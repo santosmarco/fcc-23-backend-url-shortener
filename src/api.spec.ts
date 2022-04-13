@@ -2,13 +2,13 @@ import type { Request, Response } from "express";
 import {
   handleRedirectToShortenedUrl,
   handleShortenUrl,
-  saveDatabase
+  saveDatabase,
 } from "./api";
 import type { ApiResponse, ApiResponseFail, ApiResponseSuccess } from "./types";
 
-const testShortenUrl = <T extends ApiResponse = ApiResponse>(
+const testShortenUrl = async <T extends ApiResponse = ApiResponse>(
   url: string
-): T => {
+): Promise<T> => {
   const req = {
     body: { url },
   };
@@ -21,11 +21,7 @@ const testShortenUrl = <T extends ApiResponse = ApiResponse>(
     }),
   };
 
-  handleShortenUrl(
-    req as unknown as Request,
-    res as unknown as Response,
-    jest.fn()
-  );
+  await handleShortenUrl(req as unknown as Request, res as unknown as Response);
 
   return resBody;
 };
@@ -63,16 +59,18 @@ describe("api", () => {
   });
 
   describe("handleShortenUrl", () => {
-    it("should return the correct response", () => {
-      const res = testShortenUrl<ApiResponseSuccess>("https://www.google.com/");
+    it("should return the correct response", async () => {
+      const res = await testShortenUrl<ApiResponseSuccess>(
+        "https://www.google.com/"
+      );
       expect(res).toEqual({
         original_url: "https://www.google.com/",
         short_url: 0,
       });
     });
 
-    it("should return 'invalid url'", () => {
-      const res = testShortenUrl<ApiResponseFail>("not a url");
+    it("should return 'invalid url'", async () => {
+      const res = await testShortenUrl<ApiResponseFail>("not a url");
       expect(res).toEqual({
         error: "invalid url",
       });
@@ -80,9 +78,9 @@ describe("api", () => {
   });
 
   describe("handleRedirectToShortenedUrl", () => {
-    it("should redirect to the correct URL", () => {
+    it("should redirect to the correct URL", async () => {
       const url = "https://www.google-redirect.com/";
-      console.log(testShortenUrl<ApiResponseSuccess>(url));
+      await testShortenUrl<ApiResponseSuccess>(url);
       testRedirectToShortenedUrl("0");
       expect(redirectMock).toHaveBeenCalledWith(url);
     });

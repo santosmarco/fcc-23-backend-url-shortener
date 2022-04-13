@@ -1,5 +1,5 @@
 import dns from "dns";
-import type { RequestHandler } from "express";
+import type { Request, RequestHandler, Response } from "express";
 import fs from "fs";
 import path from "path";
 import type {
@@ -13,13 +13,13 @@ import type {
 
 const SHORTENED_URLS_JSON_PATH = path.resolve(__dirname, "..", "db.json");
 
-export const handleShortenUrl: RequestHandler<unknown, ApiResponse> = (
-  req,
-  res
+export const handleShortenUrl = async (
+  req: Request<unknown, ApiResponse>,
+  res: Response
 ) => {
   const { body } = req;
 
-  if (!validateRequestBody(body)) {
+  if (!(await validateRequestBody(body))) {
     res.json(buildResponseFail());
     return;
   }
@@ -74,11 +74,16 @@ const validateBodyStructure = (body: unknown): body is ApiRequestBody => {
 };
 
 const validateBodyUrl = (url: string): Promise<boolean> => {
-  return new Promise((resolve) => {
-    return dns.lookup(url, (err) => {
-      resolve(!err);
+  try {
+    const urlObject = new URL(url);
+    return new Promise((resolve) => {
+      return dns.lookup(urlObject.hostname, (err) => {
+        resolve(!err);
+      });
     });
-  });
+  } catch (err) {
+    return Promise.resolve(false);
+  }
 };
 
 const validateShortenedUrl = (url: string | undefined): url is string => {

@@ -1,3 +1,4 @@
+import dns from "dns";
 import type { RequestHandler } from "express";
 import fs from "fs";
 import path from "path";
@@ -59,8 +60,8 @@ export const handleRedirectToShortenedUrl: RequestHandler<
   res.redirect(entry.url);
 };
 
-const validateRequestBody = (body: unknown): body is ApiRequestBody => {
-  return validateBodyStructure(body) && validateBodyUrl(body.url);
+const validateRequestBody = async (body: unknown): Promise<boolean> => {
+  return validateBodyStructure(body) && (await validateBodyUrl(body.url));
 };
 
 const validateBodyStructure = (body: unknown): body is ApiRequestBody => {
@@ -72,9 +73,12 @@ const validateBodyStructure = (body: unknown): body is ApiRequestBody => {
   );
 };
 
-const validateBodyUrl = (url: string): boolean => {
-  const urlRegExp = /^(http(s)?:\/\/)?([\w\-]+\.){1,}[\w\-]+(\/[\w\-]*)*$/;
-  return !!url.match(urlRegExp);
+const validateBodyUrl = (url: string): Promise<boolean> => {
+  return new Promise((resolve) => {
+    return dns.lookup(url, (err) => {
+      resolve(!err);
+    });
+  });
 };
 
 const validateShortenedUrl = (url: string | undefined): url is string => {
